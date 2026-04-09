@@ -83,6 +83,7 @@ func main() {
 	// Handlers are moved to src/ package for scalability
 	app.All("/groq/*", src.HandleGroq)
 	app.All("/openrouter/*", src.HandleOpenRouter)
+	app.All("/cerebras/*", src.HandleCerebras)
 
 	// Default Health Check
 	app.Get("/", func(c *fiber.Ctx) error {
