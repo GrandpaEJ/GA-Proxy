@@ -76,7 +76,7 @@ func main() {
 		return c.JSON(fiber.Map{"version": Version})
 	})
 
-	// Handshake: Panel sends a challenge, we return the assembly-obfuscated result
+	// Handshake: Panel sends a challenge, we return the signature and available services
 	app.Get("/handshake", func(c *fiber.Ctx) error {
 		challenge := c.QueryInt("challenge", 0)
 		secret := os.Getenv("PROXY_SECRET")
@@ -91,19 +91,41 @@ func main() {
 
 		result := Obfuscate(uint64(challenge), key)
 
+		// Check available services
+		var services []string
+		if os.Getenv("GROQ_API_KEY") != "" {
+			services = append(services, "groq")
+		}
+		if os.Getenv("OPENROUTER_API_KEY") != "" {
+			services = append(services, "openrouter")
+		}
+		if os.Getenv("CEREBRAS_API_KEY") != "" {
+			services = append(services, "cerebras")
+		}
+
 		return c.JSON(fiber.Map{
-			"status": "ready",
-			"version": Version,
+			"status":    "ready",
+			"version":   Version,
 			"signature": fmt.Sprintf("%x", result),
+			"services":  services,
 		})
 	})
 
 	// --- Proxy Endpoints ---
 
-	// Handlers are moved to src/ package for scalability
-	app.All("/groq/*", src.HandleGroq)
-	app.All("/openrouter/*", src.HandleOpenRouter)
-	app.All("/cerebras/*", src.HandleCerebras)
+	// Handlers are conditionally enabled based on environment variables
+	if os.Getenv("GROQ_API_KEY") != "" {
+		log.Printf("[+] Groq Service Enabled")
+		app.All("/groq/*", src.HandleGroq)
+	}
+	if os.Getenv("OPENROUTER_API_KEY") != "" {
+		log.Printf("[+] OpenRouter Service Enabled")
+		app.All("/openrouter/*", src.HandleOpenRouter)
+	}
+	if os.Getenv("CEREBRAS_API_KEY") != "" {
+		log.Printf("[+] Cerebras Service Enabled")
+		app.All("/cerebras/*", src.HandleCerebras)
+	}
 
 	// Default Health Check
 	app.Get("/", func(c *fiber.Ctx) error {
