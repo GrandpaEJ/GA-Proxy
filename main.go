@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"proxy-server/src"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
 )
@@ -29,6 +31,24 @@ func main() {
 
 	app.Use(logger.New())
 	app.Use(cors.New())
+
+	// Smart Rate Limit: Protect the proxy from being overwhelmed
+	maxReqs := 20 // Default 20 RPM
+	fmt.Sscanf(os.Getenv("RATE_LIMIT_MAX"), "%d", &maxReqs)
+	
+	app.Use(limiter.New(limiter.Config{
+		Max:        maxReqs,
+		Expiration: 1 * time.Minute,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP() // Limit by IP
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(429).JSON(fiber.Map{
+				"error": "Rate limit exceeded on this mirror",
+				"retry_after": "1 minute",
+			})
+		},
+	}))
 
 	// Security Middleware: Verify X-GA-Secret if set
 	app.Use(func(c *fiber.Ctx) error {

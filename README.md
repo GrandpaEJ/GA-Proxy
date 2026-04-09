@@ -21,6 +21,7 @@ Fork the main PteroBill repository or copy this `addons/proxy-server` folder to 
    - `GROQ_API_KEY`: Your API key from Groq Console.
    - `OPENROUTER_API_KEY`: Your API key from OpenRouter.
    - `CEREBRAS_API_KEY`: Your API key from Cerebras AI.
+   - `RATE_LIMIT_MAX`: Optional. Maximum requests per minute (default: 20).
    - `PORT`: 3000 (usually handled by Render).
 
 ### 3. Register your Proxy
