@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
+
+	"proxy-server/src"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/proxy"
 	"github.com/joho/godotenv"
 )
 
@@ -61,10 +61,9 @@ func main() {
 		challenge := c.QueryInt("challenge", 0)
 		secret := os.Getenv("PROXY_SECRET")
 		if secret == "" {
-			secret = "GA-DEFAULT-SECRET" // Fallback for simple verification
+			secret = "GA-DEFAULT-SECRET"
 		}
 
-		// Convert secret to a key (simple hash-like sum)
 		var key uint64
 		for _, char := range secret {
 			key += uint64(char)
@@ -81,11 +80,9 @@ func main() {
 
 	// --- Proxy Endpoints ---
 
-	// Groq Proxy
-	app.All("/groq/*", handleGroq)
-
-	// OpenRouter Proxy
-	app.All("/openrouter/*", handleOpenRouter)
+	// Handlers are moved to src/ package for scalability
+	app.All("/groq/*", src.HandleGroq)
+	app.All("/openrouter/*", src.HandleOpenRouter)
 
 	// Default Health Check
 	app.Get("/", func(c *fiber.Ctx) error {
@@ -103,32 +100,4 @@ func main() {
 
 	log.Printf("GA-Proxy %s starting on port %s", Version, port)
 	log.Fatal(app.Listen(":" + port))
-}
-
-func handleGroq(c *fiber.Ctx) error {
-	apiKey := os.Getenv("GROQ_API_KEY")
-	if apiKey == "" {
-		return c.Status(500).JSON(fiber.Map{"error": "GROQ_API_KEY not set"})
-	}
-
-	path := strings.TrimPrefix(c.Path(), "/groq")
-	url := "https://api.groq.com/openai" + path
-	c.Request().Header.Set("Authorization", "Bearer "+apiKey)
-	
-	return proxy.Do(c, url)
-}
-
-func handleOpenRouter(c *fiber.Ctx) error {
-	apiKey := os.Getenv("OPENROUTER_API_KEY")
-	if apiKey == "" {
-		return c.Status(500).JSON(fiber.Map{"error": "OPENROUTER_API_KEY not set"})
-	}
-
-	path := strings.TrimPrefix(c.Path(), "/openrouter")
-	url := "https://openrouter.ai/api" + path
-	c.Request().Header.Set("Authorization", "Bearer "+apiKey)
-	c.Request().Header.Set("HTTP-Referer", "https://pterobill.panel")
-	c.Request().Header.Set("X-Title", "GA-Proxy")
-
-	return proxy.Do(c, url)
 }
