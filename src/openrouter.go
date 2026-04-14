@@ -18,7 +18,7 @@ func HandleOpenRouter(c *fiber.Ctx) error {
 	path := strings.TrimPrefix(c.Path(), "/openrouter")
 	url := "https://openrouter.ai/api" + path
 	c.Request().Header.Set("Authorization", "Bearer "+apiKey)
-	c.Request().Header.Set("HTTP-Referer", "https://pterobill.panel")
+	c.Request().Header.Set("HTTP-Referer", "https://zero-bot.net")
 	c.Request().Header.Set("X-Title", "GA-Proxy")
 
 	return proxy.Do(c, url)
